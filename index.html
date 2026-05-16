@@ -8,20 +8,10 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════════════
-     BACKGROUND LAYERS
-═══════════════════════════════════ -->
-
 <canvas id="starfield"></canvas>
 <div class="nebula-bg"></div>
 
-<!-- ═══════════════════════════════════
-     MAIN LAYOUT
-═══════════════════════════════════ -->
-
 <div class="site-wrapper">
-
-  <!-- HEADER -->
   <header>
     <div class="header-star">
       <span class="star-core">✦</span>
@@ -34,37 +24,43 @@
     <div class="header-divider"></div>
   </header>
 
-  <!-- TABS -->
+  <!-- 캐릭터 탭 -->
   <div class="tabs-row" id="tabsRow"></div>
 
-  <!-- GALLERY PANELS -->
-  <div id="galleryPanels"></div>
-
-</div><!-- /.site-wrapper -->
-
-<!-- ═══════════════════════════════════
-     LIGHTBOX
-═══════════════════════════════════ -->
-
-<div class="lightbox" id="lightbox">
-  <button class="lb-close" onclick="closeLightbox()">✕</button>
-  <button class="lb-nav lb-prev" onclick="lbNav(-1)">‹</button>
-  <button class="lb-nav lb-next" onclick="lbNav(1)">›</button>
-  <div class="lb-content">
-    <img id="lbImg" src="" alt="" />
-    <div class="lb-info">
-      <div class="lb-title" id="lbTitle"></div>
-      <div class="lb-date"  id="lbDate"></div>
-      <div class="lb-desc"  id="lbDesc"></div>
-    </div>
+  <!-- 사진/글 서브탭 -->
+  <div class="subtabs-row" id="subtabsRow" style="display:none">
+    <button class="subtab-btn active" id="subtab-photos" onclick="setSubtab('photos')">🖼 사진</button>
+    <button class="subtab-btn"        id="subtab-writings" onclick="setSubtab('writings')">✍️ 글</button>
   </div>
-  <div class="lb-counter" id="lbCounter"></div>
+
+  <!-- 패널 -->
+  <div id="galleryPanels"></div>
 </div>
 
-<!-- ═══════════════════════════════════
-     PASSWORD GATE
-═══════════════════════════════════ -->
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" style="display:none"></div>
 
+<!-- POST DETAIL (게시물 상세 슬라이더) -->
+<div class="post-detail" id="postDetail">
+  <div class="post-detail-header">
+    <div>
+      <div class="post-detail-title" id="pdTitle"></div>
+      <div class="post-detail-date"  id="pdDate"></div>
+    </div>
+    <div class="post-detail-actions">
+      <div class="post-detail-close" onclick="closePostDetail()">✕</div>
+    </div>
+  </div>
+  <div class="post-detail-desc" id="pdDesc"></div>
+  <div class="post-slider">
+    <button class="post-slider-nav post-slider-prev" id="pdPrev" onclick="postDetailNav(-1)">‹</button>
+    <img id="pdImg" src="" alt="" />
+    <button class="post-slider-nav post-slider-next" id="pdNext" onclick="postDetailNav(1)">›</button>
+    <div class="post-slider-counter" id="pdCounter"></div>
+  </div>
+</div>
+
+<!-- PASSWORD GATE -->
 <div class="pw-gate" id="pwGate">
   <div class="pw-gate-box">
     <div class="pw-gate-icon">🔑</div>
@@ -82,29 +78,22 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════
-     ADD CHARACTER MODAL
-═══════════════════════════════════ -->
-
+<!-- ADD CHARACTER MODAL -->
 <div class="modal-overlay" id="addCharModal">
   <div class="modal-box">
     <h2 class="modal-title">✦ 새 캐릭터 추가</h2>
-
     <div class="form-group">
       <label class="form-label">캐릭터 이름</label>
       <input type="text" class="form-input" id="newCharName" placeholder="이름을 입력하세요" />
     </div>
-
     <div class="form-group">
       <label class="form-label">소개</label>
       <textarea class="form-textarea" id="newCharDesc" placeholder="캐릭터를 소개해주세요..."></textarea>
     </div>
-
     <div class="form-group">
       <label class="form-label">대표 이모지</label>
       <div class="emoji-picker" id="addEmojiPicker"></div>
     </div>
-
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeAddCharModal()">취소</button>
       <button class="btn-primary"   onclick="submitAddChar()">추가하기</button>
@@ -112,30 +101,23 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════
-     EDIT CHARACTER MODAL
-═══════════════════════════════════ -->
-
+<!-- EDIT CHARACTER MODAL -->
 <div class="modal-overlay" id="editCharModal">
   <div class="modal-box">
     <h2 class="modal-title">✏️ 캐릭터 수정</h2>
     <input type="hidden" id="editCharId" />
-
     <div class="form-group">
       <label class="form-label">캐릭터 이름</label>
       <input type="text" class="form-input" id="editCharName" placeholder="이름을 입력하세요" />
     </div>
-
     <div class="form-group">
       <label class="form-label">소개</label>
       <textarea class="form-textarea" id="editCharDesc" placeholder="캐릭터를 소개해주세요..."></textarea>
     </div>
-
     <div class="form-group">
       <label class="form-label">대표 이모지</label>
       <div class="emoji-picker" id="editEmojiPicker"></div>
     </div>
-
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeEditCharModal()">취소</button>
       <button class="btn-primary"   onclick="submitEditChar()">저장</button>
@@ -143,70 +125,98 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════
-     EDIT PHOTO MODAL
-═══════════════════════════════════ -->
-
-<div class="modal-overlay" id="editPhotoModal">
-  <div class="modal-box">
-    <h2 class="modal-title">🖼️ 사진 정보 수정</h2>
-    <input type="hidden" id="editPhotoCharId" />
-    <input type="hidden" id="editPhotoIdField" />
-
+<!-- ADD/EDIT POST MODAL (사진 게시물) -->
+<div class="modal-overlay" id="postModal">
+  <div class="modal-box modal-box-wide">
+    <h2 class="modal-title" id="postModalTitle">🖼️ 사진 게시물</h2>
+    <input type="hidden" id="postCharId" />
+    <input type="hidden" id="postId" />
     <div class="form-group">
       <label class="form-label">제목</label>
-      <input type="text" class="form-input" id="editPhotoTitleM" placeholder="사진 제목" />
+      <input type="text" class="form-input" id="postTitle" placeholder="게시물 제목" />
     </div>
-
     <div class="form-group">
       <label class="form-label">날짜</label>
-      <input type="text" class="form-input" id="editPhotoDateM" placeholder="YYYY.MM.DD" />
+      <input type="text" class="form-input" id="postDate" placeholder="YYYY.MM.DD" />
     </div>
-
     <div class="form-group">
-      <label class="form-label">부가 설명</label>
-      <textarea class="form-textarea" id="editPhotoDescM" placeholder="이 사진에 대한 설명을 입력해주세요..."></textarea>
+      <label class="form-label">설명</label>
+      <textarea class="form-textarea" id="postDesc" placeholder="게시물 설명..."></textarea>
     </div>
-
+    <div class="form-group">
+      <label class="form-label">사진 추가</label>
+      <label class="upload-area upload-area-sm">
+        <input type="file" id="postImages" accept="image/*" multiple class="upload-input" />
+        <div class="upload-icon" style="font-size:1.4rem">📷</div>
+        <div class="upload-text">클릭하여 사진 선택</div>
+      </label>
+      <div class="post-img-preview" id="postImgPreview"></div>
+    </div>
     <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeEditPhotoModal()">취소</button>
-      <button class="btn-primary"   onclick="submitEditPhoto()">저장</button>
+      <button class="btn-secondary" onclick="closePostModal()">취소</button>
+      <button class="btn-primary"   onclick="submitPost()">저장</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════
-     CONFIRM DIALOG
-═══════════════════════════════════ -->
+<!-- ADD/EDIT WRITING MODAL (글) -->
+<div class="modal-overlay" id="writingModal">
+  <div class="modal-box modal-box-wide">
+    <h2 class="modal-title" id="writingModalTitle">✍️ 글 작성</h2>
+    <input type="hidden" id="writingCharId" />
+    <input type="hidden" id="writingId" />
+    <div class="form-group">
+      <label class="form-label">제목</label>
+      <input type="text" class="form-input" id="writingTitle" placeholder="글 제목" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">날짜</label>
+      <input type="text" class="form-input" id="writingDate" placeholder="YYYY.MM.DD" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">본문</label>
+      <textarea class="form-textarea form-textarea-tall" id="writingBody" placeholder="글을 작성해주세요..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeWritingModal()">취소</button>
+      <button class="btn-primary"   onclick="submitWriting()">저장</button>
+    </div>
+  </div>
+</div>
 
+<!-- WRITING DETAIL MODAL (글 읽기) -->
+<div class="modal-overlay" id="writingDetailModal">
+  <div class="modal-box modal-box-wide">
+    <div class="writing-detail-header">
+      <div>
+        <div class="writing-detail-title" id="wdTitle"></div>
+        <div class="writing-detail-date"  id="wdDate"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <div class="icon-btn" onclick="editWritingFromDetail()" title="수정">✏️</div>
+        <div class="icon-btn danger" onclick="deleteWritingFromDetail()" title="삭제">🗑️</div>
+        <div class="icon-btn" onclick="closeWritingDetailModal()" title="닫기">✕</div>
+      </div>
+    </div>
+    <div class="writing-detail-body" id="wdBody"></div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
 <div class="modal-overlay" id="confirmModal">
   <div class="modal-box confirm-box">
     <h2 class="modal-title">⚠️ 확인</h2>
     <p class="confirm-msg" id="confirmMsg"></p>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeConfirm()">취소</button>
-      <button class="btn-danger" onclick="console.log('삭제확인클릭'); submitConfirm()">삭제</button>
+      <button class="btn-danger"    onclick="submitConfirm()">삭제</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════
-     TOAST
-═══════════════════════════════════ -->
-
 <div class="toast" id="toast"></div>
 
-<!-- ═══════════════════════════════════
-     SCRIPTS
-═══════════════════════════════════ -->
-
-<!-- ═══════════════════════════════════
-     SCRIPTS
-═══════════════════════════════════ -->
-
 <script>
-/* Firebase 설정 — 이 값은 공개돼도 안전합니다.
-   비밀번호는 Netlify 환경변수에서 관리됩니다. */
 const CONFIG = {
   firebaseConfig: {
     apiKey:            "AIzaSyCbvz_ctnlY2fWgWyzskb6E45gBLNy5bEc",
@@ -220,7 +230,6 @@ const CONFIG = {
   },
 };
 </script>
-<!-- Firebase compat (전역 스크립트, import 불필요) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="gallery.js"></script>
