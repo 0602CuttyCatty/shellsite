@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shell 캐사 정리</title>
+  <link rel="stylesheet" href="gallery.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════
+     BACKGROUND LAYERS
+═══════════════════════════════════ -->
+
+<canvas id="starfield"></canvas>
+<div class="nebula-bg"></div>
+
+<!-- ═══════════════════════════════════
+     MAIN LAYOUT
+═══════════════════════════════════ -->
+
+<div class="site-wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-star">
+      <span class="star-core">✦</span>
+      <span class="star-orbit">✧</span>
+      <span class="star-orbit">⋆</span>
+      <span class="star-orbit">✺</span>
+    </div>
+    <h1 class="site-title">Shell Gallery</h1>
+    <p class="site-subtitle">캐사 정리 및 모음 사이트입니다 <br> 캐요소 및 서사 뺏어가지 말아주세요!</p>
+    <div class="header-divider"></div>
+  </header>
+
+  <!-- TABS -->
+  <div class="tabs-row" id="tabsRow"></div>
+
+  <!-- GALLERY PANELS -->
+  <div id="galleryPanels"></div>
+
+</div><!-- /.site-wrapper -->
+
+<!-- ═══════════════════════════════════
+     LIGHTBOX
+═══════════════════════════════════ -->
+
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <button class="lb-nav lb-prev" onclick="lbNav(-1)">‹</button>
+  <button class="lb-nav lb-next" onclick="lbNav(1)">›</button>
+  <div class="lb-content">
+    <img id="lbImg" src="" alt="" />
+    <div class="lb-info">
+      <div class="lb-title" id="lbTitle"></div>
+      <div class="lb-date"  id="lbDate"></div>
+      <div class="lb-desc"  id="lbDesc"></div>
+    </div>
+  </div>
+  <div class="lb-counter" id="lbCounter"></div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PASSWORD GATE
+═══════════════════════════════════ -->
+
+<div class="pw-gate" id="pwGate">
+  <div class="pw-gate-box">
+    <div class="pw-gate-icon">🔑</div>
+    <div class="pw-gate-title">비밀번호를 입력하세요</div>
+    <div class="pw-gate-sub">이 작업은 비밀번호가 필요합니다</div>
+    <div class="form-group pw-wrap">
+      <input type="password" class="form-input" id="pwInput" placeholder="비밀번호" autocomplete="off" />
+      <button class="pw-toggle" id="pwToggleBtn" onclick="togglePw('pwInput','pwToggleBtn')" type="button">👁️</button>
+    </div>
+    <div class="pw-error" id="pwError"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closePwGate()">취소</button>
+      <button class="btn-primary"   onclick="submitPassword()">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     ADD CHARACTER MODAL
+═══════════════════════════════════ -->
+
+<div class="modal-overlay" id="addCharModal">
+  <div class="modal-box">
+    <h2 class="modal-title">✦ 새 캐릭터 추가</h2>
+
+    <div class="form-group">
+      <label class="form-label">캐릭터 이름</label>
+      <input type="text" class="form-input" id="newCharName" placeholder="이름을 입력하세요" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">소개</label>
+      <textarea class="form-textarea" id="newCharDesc" placeholder="캐릭터를 소개해주세요..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">대표 이모지</label>
+      <div class="emoji-picker" id="addEmojiPicker"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeAddCharModal()">취소</button>
+      <button class="btn-primary"   onclick="submitAddChar()">추가하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     EDIT CHARACTER MODAL
+═══════════════════════════════════ -->
+
+<div class="modal-overlay" id="editCharModal">
+  <div class="modal-box">
+    <h2 class="modal-title">✏️ 캐릭터 수정</h2>
+    <input type="hidden" id="editCharId" />
+
+    <div class="form-group">
+      <label class="form-label">캐릭터 이름</label>
+      <input type="text" class="form-input" id="editCharName" placeholder="이름을 입력하세요" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">소개</label>
+      <textarea class="form-textarea" id="editCharDesc" placeholder="캐릭터를 소개해주세요..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">대표 이모지</label>
+      <div class="emoji-picker" id="editEmojiPicker"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeEditCharModal()">취소</button>
+      <button class="btn-primary"   onclick="submitEditChar()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     EDIT PHOTO MODAL
+═══════════════════════════════════ -->
+
+<div class="modal-overlay" id="editPhotoModal">
+  <div class="modal-box">
+    <h2 class="modal-title">🖼️ 사진 정보 수정</h2>
+    <input type="hidden" id="editPhotoCharId" />
+    <input type="hidden" id="editPhotoIdField" />
+
+    <div class="form-group">
+      <label class="form-label">제목</label>
+      <input type="text" class="form-input" id="editPhotoTitleM" placeholder="사진 제목" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">날짜</label>
+      <input type="text" class="form-input" id="editPhotoDateM" placeholder="YYYY.MM.DD" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">부가 설명</label>
+      <textarea class="form-textarea" id="editPhotoDescM" placeholder="이 사진에 대한 설명을 입력해주세요..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeEditPhotoModal()">취소</button>
+      <button class="btn-primary"   onclick="submitEditPhoto()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     CONFIRM DIALOG
+═══════════════════════════════════ -->
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box confirm-box">
+    <h2 class="modal-title">⚠️ 확인</h2>
+    <p class="confirm-msg" id="confirmMsg"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeConfirm()">취소</button>
+      <button class="btn-danger"    onclick="submitConfirm()">삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     TOAST
+═══════════════════════════════════ -->
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════ -->
+
+<script src="config.js"></script>
+<!-- Firebase compat (전역 스크립트, import 불필요) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="gallery.js"></script>
+
+</body>
+</html>
