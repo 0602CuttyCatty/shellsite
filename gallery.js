@@ -1,111 +1,22 @@
 /* ═══════════════════════════════════════════
    CELESTIAL GALLERY — gallery.js
-   - 메타데이터(이름/설명/날짜): Firestore
-   - 이미지 원본: IndexedDB (브라우저 로컬)
-   - Firestore에는 썸네일(200px)만 저장
-     → 1MB 제한 걱정 없음
+   Firebase Storage (이미지) + Firestore (메타)
+   원본 화질 저장
 ═══════════════════════════════════════════ */
 
 'use strict';
 
 if (typeof CONFIG === 'undefined') {
-  document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;color:#c8d8f0;background:#03010a;font-family:sans-serif"><div style="font-size:2rem">⚠️</div><div>config.js 를 찾을 수 없습니다</div></div>`;
-  throw new Error('config.js not found');
+  document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;color:#c8d8f0;background:#03010a;font-family:sans-serif"><div style="font-size:2rem">⚠️</div><div>CONFIG 설정을 찾을 수 없습니다</div></div>`;
+  throw new Error('CONFIG not found');
 }
 
 /* ══════════════════════════════
-   FIREBASE COMPAT 초기화
+   FIREBASE 초기화 (Compat SDK)
 ══════════════════════════════ */
 
 firebase.initializeApp(CONFIG.firebaseConfig);
 const db = firebase.firestore();
-
-/* ══════════════════════════════
-   INDEXED DB (이미지 원본 저장)
-══════════════════════════════ */
-
-let idb;
-
-function openIDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open('celestial_gallery', 1);
-    req.onupgradeneeded = e => {
-      e.target.result.createObjectStore('images', { keyPath: 'id' });
-    };
-    req.onsuccess = e => { idb = e.target.result; resolve(idb); };
-    req.onerror   = () => reject(req.error);
-  });
-}
-
-function idbSave(id, dataUrl) {
-  return new Promise((resolve, reject) => {
-    const tx  = idb.transaction('images', 'readwrite');
-    const req = tx.objectStore('images').put({ id, dataUrl });
-    req.onsuccess = resolve;
-    req.onerror   = () => reject(req.error);
-  });
-}
-
-function idbGet(id) {
-  return new Promise((resolve, reject) => {
-    const tx  = idb.transaction('images', 'readonly');
-    const req = tx.objectStore('images').get(id);
-    req.onsuccess = () => resolve(req.result?.dataUrl || null);
-    req.onerror   = () => reject(req.error);
-  });
-}
-
-function idbDelete(id) {
-  return new Promise((resolve, reject) => {
-    const tx  = idb.transaction('images', 'readwrite');
-    const req = tx.objectStore('images').delete(id);
-    req.onsuccess = resolve;
-    req.onerror   = () => reject(req.error);
-  });
-}
-
-/* ══════════════════════════════
-   이미지 처리 유틸
-══════════════════════════════ */
-
-// 원본 저장용 (최대 1920px, 품질 88%)
-function fileToBase64(file, maxW = 1920, q = 0.88) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        let { width: w, height: h } = img;
-        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-        const c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        c.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(c.toDataURL('image/jpeg', q));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-// 썸네일 생성 (Firestore 저장용, 최대 300px, 품질 70%)
-function makeThumb(base64, maxW = 300, q = 0.70) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      let { width: w, height: h } = img;
-      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
-      resolve(c.toDataURL('image/jpeg', q));
-    };
-    img.onerror = reject;
-    img.src = base64;
-  });
-}
 
 /* ══════════════════════════════
    CONSTANTS / STATE
@@ -116,9 +27,6 @@ const EMOJIS = [
   '🦊','🐉','👑','🌺','🌈','⚡','🔮','🌊',
   '🌹','🍃','🎭','🦄','🔱','🌙','🏹','🗡️',
 ];
-
-// 로드된 원본 이미지 메모리 캐시 (photoId → dataUrl)
-const imgCache = {};
 
 let state = {
   characters:     [],
@@ -134,7 +42,7 @@ let state = {
 };
 
 /* ══════════════════════════════
-   FIRESTORE 리스너
+   FIRESTORE 실시간 리스너
 ══════════════════════════════ */
 
 const photoUnsubMap = {};
@@ -162,20 +70,9 @@ function initFirestore() {
       photoUnsubMap[charDoc.id] = db
         .collection('characters').doc(charDoc.id)
         .collection('photos').orderBy('createdAt', 'desc')
-        .onSnapshot(async photoSnap => {
+        .onSnapshot(photoSnap => {
           const photos = photoSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-          // 원본 이미지 IndexedDB에서 로드 (캐시 활용)
-          for (const p of photos) {
-            if (!imgCache[p.id]) {
-              const stored = await idbGet(p.id);
-              if (stored) imgCache[p.id] = stored;
-            }
-            // fullUrl: 원본 있으면 원본, 없으면 thumb
-            p.fullUrl  = imgCache[p.id] || p.thumb || '';
-          }
-
-          const char = state.characters.find(c => c.id === charDoc.id);
+          const char   = state.characters.find(c => c.id === charDoc.id);
           if (char) char.photos = photos;
 
           state.characters.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -188,8 +85,8 @@ function initFirestore() {
     });
 
     if (snapshot.docs.length === 0) {
-      state.characters  = [];
-      state.loading     = false;
+      state.characters   = [];
+      state.loading      = false;
       state.activeCharId = null;
       render();
     }
@@ -214,21 +111,22 @@ function fbUpdateChar(charId, name, desc, emoji) {
 async function fbDeleteChar(charId) {
   const char = state.characters.find(c => c.id === charId);
   if (char) {
-    for (const p of char.photos) await fbDeletePhoto(charId, p.id);
+    for (const p of char.photos) await fbDeletePhoto(charId, p.id, p.storagePath);
   }
   return db.collection('characters').doc(charId).delete();
 }
 
 /* ══════════════════════════════
-   FB CRUD — 사진
+   FB CRUD — 사진 (Storage + Firestore)
 ══════════════════════════════ */
 
-async function fbAddPhoto(charId, photoId, thumb, title, date) {
-  // Firestore에는 썸네일 + 메타만 저장
+async function fbAddPhoto(charId, file, title, date) {
+  const photoId          = uid();
+  const { url, publicId } = await uploadToCloudinary(file);
+
   await db.collection('characters').doc(charId)
     .collection('photos').doc(photoId).set({
-      title, date, desc: '', thumb,
-      createdAt: Date.now(),
+      title, date, desc: '', url, publicId, createdAt: Date.now(),
     });
 }
 
@@ -237,9 +135,9 @@ function fbUpdatePhoto(charId, photoId, title, date, desc) {
     .collection('photos').doc(photoId).update({ title, date, desc });
 }
 
-async function fbDeletePhoto(charId, photoId) {
-  await idbDelete(photoId).catch(() => {});
-  delete imgCache[photoId];
+async function fbDeletePhoto(charId, photoId, publicId) {
+  // Cloudinary 삭제는 서버 처리가 필요해 일단 Firestore만 삭제
+  // (Cloudinary 무료플랜은 대시보드에서 직접 삭제 가능)
   return db.collection('characters').doc(charId)
     .collection('photos').doc(photoId).delete();
 }
@@ -254,12 +152,14 @@ function initStarfield() {
   function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
   resize();
   window.addEventListener('resize', resize);
+
   const stars = Array.from({ length: 300 }, () => ({
     x: Math.random()*innerWidth, y: Math.random()*innerHeight,
     r: Math.random()*1.7+0.2,   a: Math.random(),
     da: (Math.random()*0.013+0.003)*(Math.random()<0.5?1:-1),
     color: ['#ffffff','#c8d8f0','#f5d67a','#d0b8ff','#a8d8ff'][Math.floor(Math.random()*5)],
   }));
+
   (function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
     stars.forEach(s => {
@@ -273,9 +173,9 @@ function initStarfield() {
 }
 
 function launchShootingStar() {
-  const el = document.createElement('div');
+  const el  = document.createElement('div');
   el.className = 'shooting-star';
-  const x = Math.random()*innerWidth*0.82;
+  const x   = Math.random()*innerWidth*0.82;
   const dur = (1.8+Math.random()*1.3).toFixed(2);
   el.style.cssText = `left:${x}px;top:-24px;animation:shoot ${dur}s ease forwards`;
   document.body.appendChild(el);
@@ -378,7 +278,7 @@ function renderPanels() {
     uploadArea.addEventListener('dragleave', ()=>uploadArea.classList.remove('drag-over'));
     uploadArea.addEventListener('drop', e=>{
       e.preventDefault(); uploadArea.classList.remove('drag-over');
-      const saved = Array.from(e.dataTransfer.files);
+      const saved = Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/'));
       if (saved.length) requirePassword('uploadPhotos', c.id, null, saved);
     });
   });
@@ -429,9 +329,8 @@ function buildPanelHTML(c) {
 
 function buildCardHTML(c, p, i) {
   const isOpen  = state.openPhotoId===p.id;
-  const src     = p.fullUrl || p.thumb || '';
-  const imgHTML = src
-    ?`<img src="${src}" alt="${p.title}" loading="lazy" />`
+  const imgHTML = p.url
+    ?`<img src="${p.url}" alt="${p.title}" loading="lazy" />`
     :`<div class="photo-placeholder">${c.emoji}</div>`;
   const detailHTML = isOpen ? buildDetailHTML(c,p) : '';
 
@@ -502,24 +401,46 @@ function setSortOrder(o) { state.sortOrder=o; render(); }
 function setViewMode(m)  { state.viewMode=m;  render(); }
 
 /* ══════════════════════════════
-   UPLOAD
+   CLOUDINARY 업로드
+   서버에서 서명 받아 직접 업로드 (API Secret 노출 없음)
 ══════════════════════════════ */
+
+async function uploadToCloudinary(file) {
+  // 1) Netlify Function에서 서명 받기
+  const sigRes = await fetch('/.netlify/functions/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'sign', folder: 'gallery' }),
+  });
+  const { signature, timestamp, apiKey, cloudName, folder } = await sigRes.json();
+
+  // 2) Cloudinary에 직접 업로드
+  const formData = new FormData();
+  formData.append('file',      file);
+  formData.append('folder',    folder);
+  formData.append('timestamp', timestamp);
+  formData.append('api_key',   apiKey);
+  formData.append('signature', signature);
+
+  const upRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!upRes.ok) throw new Error('Cloudinary 업로드 실패');
+  const data = await upRes.json();
+  return { url: data.secure_url, publicId: data.public_id };
+}
 
 async function processFiles(charId, files) {
   const arr = Array.from(files).filter(f=>f.type.startsWith('image/'));
   if (!arr.length) return;
 
   for (let i=0; i<arr.length; i++) {
-    showToast(`⏳ 처리 중... (${i+1}/${arr.length})`, '');
+    showToast(`⏳ 업로드 중... (${i+1}/${arr.length})`, '');
     try {
-      const photoId = uid();
-      const full    = await fileToBase64(arr[i]);       // 원본 (1920px)
-      const thumb   = await makeThumb(full);            // 썸네일 (300px) → Firestore
-      const title   = arr[i].name.replace(/\.[^/.]+$/,'');
-
-      await idbSave(photoId, full);                     // IndexedDB에 원본 저장
-      imgCache[photoId] = full;                         // 메모리 캐시
-      await fbAddPhoto(charId, photoId, thumb, title, todayStr()); // Firestore에 메타+썸네일
+      const title = arr[i].name.replace(/\.[^/.]+$/,'');
+      await fbAddPhoto(charId, arr[i], title, todayStr());
     } catch(e) {
       console.error(e);
       showToast('❌ 업로드 실패: '+arr[i].name, 'error');
@@ -547,8 +468,7 @@ function showLbPhoto() {
   const { photos, index } = state.lb;
   const p = photos[index]; if(!p) return;
   const img = document.getElementById('lbImg');
-  const src = p.fullUrl || p.thumb || '';
-  if (src){ img.src=src; img.style.display=''; } else { img.src=''; img.style.display='none'; }
+  if (p.url){ img.src=p.url; img.style.display=''; } else { img.src=''; img.style.display='none'; }
   document.getElementById('lbTitle').textContent = p.title;
   document.getElementById('lbDate').textContent  = p.date;
   const descEl = document.getElementById('lbDesc');
@@ -582,8 +502,19 @@ document.getElementById('lightbox').addEventListener('click', e=>{
   if(e.target===document.getElementById('lightbox')) closeLightbox();
 });
 
+// 터치 스와이프
+(function() {
+  let tx=0, ty=0;
+  const lb = document.getElementById('lightbox');
+  lb.addEventListener('touchstart', e=>{ tx=e.touches[0].clientX; ty=e.touches[0].clientY; }, { passive:true });
+  lb.addEventListener('touchend',   e=>{
+    const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+    if (Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>50) lbNav(dx<0?1:-1);
+  }, { passive:true });
+})();
+
 /* ══════════════════════════════
-   PASSWORD GATE
+   PASSWORD GATE (Netlify Function)
 ══════════════════════════════ */
 
 function requirePassword(type, charId, photoId, files) {
@@ -597,7 +528,6 @@ function requirePassword(type, charId, photoId, files) {
 async function submitPassword() {
   const val = document.getElementById('pwInput').value;
   if (!val) return;
-
   const pwError = document.getElementById('pwError');
   const pwInput = document.getElementById('pwInput');
   pwError.textContent = '';
@@ -608,20 +538,14 @@ async function submitPassword() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: val }),
     });
-
-    if (res.ok) {
-      const { ok } = await res.json();
-      if (ok) {
-        closePwGate();
-        executeAction(state.pendingAction);
-        state.pendingAction = null;
-      } else {
-        pwError.textContent = '⚠ 비밀번호가 올바르지 않습니다';
-        pwInput.value = '';
-        pwInput.focus();
-      }
+    const { ok } = await res.json();
+    if (ok) {
+      closePwGate();
+      executeAction(state.pendingAction);
+      state.pendingAction = null;
     } else {
-      pwError.textContent = '⚠ 서버 오류가 발생했습니다';
+      pwError.textContent = '⚠ 비밀번호가 올바르지 않습니다';
+      pwInput.value = ''; pwInput.focus();
     }
   } catch {
     pwError.textContent = '⚠ 네트워크 오류가 발생했습니다';
@@ -643,13 +567,13 @@ function executeAction(action) {
   if(!action) return;
   const {type,charId,photoId,files} = action;
   switch(type) {
-    case 'openAddChar':          openAddCharModal();                    break;
-    case 'openEditChar':         openEditCharModal(charId);             break;
+    case 'openAddChar':          openAddCharModal();  break;
+    case 'openEditChar':         openEditCharModal(charId); break;
     case 'confirmDeleteChar':    openConfirm('캐릭터를 삭제할까요?<br>해당 캐릭터의 사진도 모두 삭제됩니다.',()=>doDeleteChar(charId)); break;
-    case 'openEditPhoto':        openEditPhotoModal(charId,photoId);    break;
+    case 'openEditPhoto':        openEditPhotoModal(charId,photoId); break;
     case 'confirmDeletePhoto':   openConfirm('이 사진을 삭제할까요?',()=>doDeletePhoto(charId,photoId)); break;
-    case 'startEditPhotoDetail': startEditPhotoDetail(charId,photoId);  break;
-    case 'uploadPhotos':         processFiles(charId,files);            break;
+    case 'startEditPhotoDetail': startEditPhotoDetail(charId,photoId); break;
+    case 'uploadPhotos':         processFiles(charId,files); break;
   }
 }
 
@@ -734,8 +658,10 @@ async function submitEditPhoto() {
 }
 
 async function doDeletePhoto(charId, photoId) {
+  const char  = state.characters.find(c=>c.id===charId);
+  const photo = char?.photos.find(p=>p.id===photoId);
   if (state.openPhotoId===photoId) state.openPhotoId = null;
-  try { await fbDeletePhoto(charId,photoId); showToast('🗑️ 사진이 삭제되었습니다'); }
+  try { await fbDeletePhoto(charId, photoId, photo?.publicId); showToast('🗑️ 사진이 삭제되었습니다'); }
   catch(e) { console.error(e); showToast('❌ 삭제 실패','error'); }
 }
 
@@ -802,29 +728,6 @@ function togglePw(inputId, btnId) {
    INIT
 ══════════════════════════════ */
 
-openIDB().then(() => {
-  initStarfield();
-  renderLoading();
-  initFirestore();
-}).catch(e => {
-  console.error('IndexedDB 초기화 실패:', e);
-  // IDB 없이도 진행 (썸네일만 표시)
-  initStarfield();
-  renderLoading();
-  initFirestore();
-});
-
-// 터치 스와이프로 사진 넘기기
-(function() {
-  let tx = 0, ty = 0;
-  const lb = document.getElementById('lightbox');
-  lb.addEventListener('touchstart', e => {
-    tx = e.touches[0].clientX;
-    ty = e.touches[0].clientY;
-  }, { passive: true });
-  lb.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - tx;
-    const dy = e.changedTouches[0].clientY - ty;
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) lbNav(dx < 0 ? 1 : -1);
-  }, { passive: true });
-})();
+initStarfield();
+renderLoading();
+initFirestore();
