@@ -702,10 +702,18 @@ function openConfirm(msg,cb)  {
   document.getElementById('confirmModal').classList.add('open');
 }
 function closeConfirm()       { document.getElementById('confirmModal').classList.remove('open'); confirmCallback=null; }
-function submitConfirm()      {
+function submitConfirm() {
   console.log('submitConfirm 호출, confirmCallback:', confirmCallback);
+  const cb = confirmCallback;
   closeConfirm();
-  if(confirmCallback) confirmCallback();
+  if (cb) {
+    try {
+      const result = cb();
+      if (result && result.catch) result.catch(e => console.error('confirmCallback 에러:', e));
+    } catch(e) {
+      console.error('confirmCallback 동기 에러:', e);
+    }
+  }
 }
 
 /* ══════════════════════════════
