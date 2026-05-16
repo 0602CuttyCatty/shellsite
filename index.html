@@ -30,7 +30,7 @@
       <span class="star-orbit">✺</span>
     </div>
     <h1 class="site-title">Shell Gallery</h1>
-    <p class="site-subtitle">캐사 정리 및 모음 사이트입니다 <br> 캐요소 및 서사 뺏어가지 말아주세요!</p>
+    <p class="site-subtitle">캐사 정리 및 모음 사이트입니다<br>캐요소 및 서사 뺏어가지 말아주세요!</p>
     <div class="header-divider"></div>
   </header>
 
@@ -200,7 +200,26 @@
      SCRIPTS
 ═══════════════════════════════════ -->
 
-<script src="config.js"></script>
+<!-- ═══════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════ -->
+
+<script>
+/* Firebase 설정 — 이 값은 공개돼도 안전합니다.
+   비밀번호는 Netlify 환경변수에서 관리됩니다. */
+const CONFIG = {
+  firebaseConfig: {
+    apiKey:            "AIzaSyCbvz_ctnlY2fWgWyzskb6E45gBLNy5bEc",
+    authDomain:        "shellwebsite-81d3d.firebaseapp.com",
+    databaseURL:       "https://shellwebsite-81d3d-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:         "shellwebsite-81d3d",
+    storageBucket:     "shellwebsite-81d3d.firebasestorage.app",
+    messagingSenderId: "99801156278",
+    appId:             "1:99801156278:web:82191e1698c1d6f4517417",
+    measurementId:     "G-J2PHKTCVF8",
+  },
+};
+</script>
 <!-- Firebase compat (전역 스크립트, import 불필요) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>

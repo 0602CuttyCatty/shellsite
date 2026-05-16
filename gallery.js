@@ -594,17 +594,38 @@ function requirePassword(type, charId, photoId, files) {
   requestAnimationFrame(()=>document.getElementById('pwInput').focus());
 }
 
-function submitPassword() {
+async function submitPassword() {
   const val = document.getElementById('pwInput').value;
-  if (val !== CONFIG.password) {
-    document.getElementById('pwError').textContent = '⚠ 비밀번호가 올바르지 않습니다';
-    document.getElementById('pwInput').value = '';
-    document.getElementById('pwInput').focus();
-    return;
+  if (!val) return;
+
+  const pwError = document.getElementById('pwError');
+  const pwInput = document.getElementById('pwInput');
+  pwError.textContent = '';
+
+  try {
+    const res = await fetch('/.netlify/functions/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: val }),
+    });
+
+    if (res.ok) {
+      const { ok } = await res.json();
+      if (ok) {
+        closePwGate();
+        executeAction(state.pendingAction);
+        state.pendingAction = null;
+      } else {
+        pwError.textContent = '⚠ 비밀번호가 올바르지 않습니다';
+        pwInput.value = '';
+        pwInput.focus();
+      }
+    } else {
+      pwError.textContent = '⚠ 서버 오류가 발생했습니다';
+    }
+  } catch {
+    pwError.textContent = '⚠ 네트워크 오류가 발생했습니다';
   }
-  closePwGate();
-  executeAction(state.pendingAction);
-  state.pendingAction = null;
 }
 
 function closePwGate() { document.getElementById('pwGate').classList.remove('open'); }
