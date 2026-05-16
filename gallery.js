@@ -725,6 +725,23 @@ function togglePw(inputId, btnId) {
 });
 
 /* ══════════════════════════════
+   WINDOW 전역 노출
+   HTML onclick에서 호출되는 함수들
+══════════════════════════════ */
+
+Object.assign(window, {
+  requirePassword,
+  submitPassword, closePwGate, togglePw,
+  setSortOrder, setViewMode,
+  openLightbox, closeLightbox, lbNav,
+  toggleDetail, savePhotoEdit, cancelPhotoEdit,
+  closeAddCharModal, submitAddChar,
+  closeEditCharModal, submitEditChar,
+  closeEditPhotoModal, submitEditPhoto,
+  closeConfirm, submitConfirm,
+});
+
+/* ══════════════════════════════
    INIT
 ══════════════════════════════ */
 
