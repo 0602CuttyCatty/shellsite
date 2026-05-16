@@ -660,9 +660,16 @@ async function submitEditPhoto() {
 async function doDeletePhoto(charId, photoId) {
   const char  = state.characters.find(c=>c.id===charId);
   const photo = char?.photos.find(p=>p.id===photoId);
+  console.log('삭제 시도:', charId, photoId, photo);
   if (state.openPhotoId===photoId) state.openPhotoId = null;
-  try { await fbDeletePhoto(charId, photoId, photo?.publicId); showToast('🗑️ 사진이 삭제되었습니다'); }
-  catch(e) { console.error(e); showToast('❌ 삭제 실패','error'); }
+  try {
+    await fbDeletePhoto(charId, photoId, photo?.publicId);
+    console.log('삭제 성공');
+    showToast('🗑️ 사진이 삭제되었습니다');
+  } catch(e) {
+    console.error('삭제 실패:', e);
+    showToast('❌ 삭제 실패','error');
+  }
 }
 
 function startEditPhotoDetail(charId, photoId) {
