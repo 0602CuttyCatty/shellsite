@@ -692,9 +692,18 @@ function cancelPhotoEdit() { state.editingPhotoId=null; render(); }
 ══════════════════════════════ */
 
 let confirmCallback = null;
-function openConfirm(msg,cb)  { confirmCallback=cb; document.getElementById('confirmMsg').innerHTML=msg; document.getElementById('confirmModal').classList.add('open'); }
+function openConfirm(msg,cb)  {
+  console.log('openConfirm 호출, cb:', cb);
+  confirmCallback=cb;
+  document.getElementById('confirmMsg').innerHTML=msg;
+  document.getElementById('confirmModal').classList.add('open');
+}
 function closeConfirm()       { document.getElementById('confirmModal').classList.remove('open'); confirmCallback=null; }
-function submitConfirm()      { closeConfirm(); if(confirmCallback) confirmCallback(); }
+function submitConfirm()      {
+  console.log('submitConfirm 호출, confirmCallback:', confirmCallback);
+  closeConfirm();
+  if(confirmCallback) confirmCallback();
+}
 
 /* ══════════════════════════════
    EMOJI PICKER
