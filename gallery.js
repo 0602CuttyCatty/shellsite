@@ -539,10 +539,12 @@ async function submitPassword() {
       body: JSON.stringify({ password: val }),
     });
     const { ok } = await res.json();
+    console.log('비밀번호 결과:', ok, '/ pendingAction:', JSON.stringify(state.pendingAction));
     if (ok) {
-      closePwGate();
-      executeAction(state.pendingAction);
+      const action = state.pendingAction;
       state.pendingAction = null;
+      closePwGate();
+      executeAction(action);
     } else {
       pwError.textContent = '⚠ 비밀번호가 올바르지 않습니다';
       pwInput.value = ''; pwInput.focus();
@@ -564,6 +566,7 @@ document.getElementById('pwInput').addEventListener('keydown', e=>{
 ══════════════════════════════ */
 
 function executeAction(action) {
+  console.log('executeAction:', action);
   if(!action) return;
   const {type,charId,photoId,files} = action;
   switch(type) {
