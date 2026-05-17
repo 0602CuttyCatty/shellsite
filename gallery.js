@@ -445,10 +445,6 @@ function renderWritingsPanel(c, container){
           <div class="writing-card-title">${w.title||'(제목 없음)'}</div>
           <div class="writing-card-date">${w.date||''}</div>
           <div class="writing-card-preview">${preview}${(w.body||'').length>100?'…':''}</div>
-        </div>
-        <div class="writing-card-actions">
-          <div class="icon-btn" onclick="event.stopPropagation();requirePassword('openEditWriting','${c.id}','${w.id}')">✏️</div>
-          <div class="icon-btn danger" onclick="event.stopPropagation();requirePassword('confirmDeleteWriting','${c.id}','${w.id}')">🗑️</div>
         </div>`;
       card.onclick=e=>{ if(!e.target.closest('.writing-card-actions')) openWritingDetail(c.id,w.id); };
       grid.appendChild(card);
