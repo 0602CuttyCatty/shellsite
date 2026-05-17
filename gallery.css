@@ -1205,7 +1205,7 @@ header {
 .writing-list { display: flex; flex-direction: column; gap: 14px; }
 
 .writing-item {
-  padding: 20px 24px;
+  padding: 20px 24px 24px;
   background: var(--card-bg);
   border: 1px solid rgba(180,150,255,0.45);
   border-radius: 14px; cursor: pointer;
@@ -1336,4 +1336,4 @@ header {
   .writing-item       { padding: 16px; }
   .modal-box-wide     { width: 96vw; padding: 20px 14px; }
   .form-textarea-tall { min-height: 150px; }
-}/* cache bust */
+}
