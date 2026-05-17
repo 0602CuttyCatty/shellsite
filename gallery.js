@@ -441,8 +441,7 @@ function renderWritingsPanel(c, container){
       card.style.animationDelay=i*0.055+'s';
       const preview=(w.body||'').slice(0,80).replace(/\n/g,' ');
       card.innerHTML=`
-        <div class="post-thumb-placeholder" style="aspect-ratio:4/3;font-size:2.5rem">✍️</div>
-        <div class="post-card-body">
+        <div class="post-card-body" style="padding:20px 16px 16px">
           <div class="post-card-title">${w.title||'(제목 없음)'}</div>
           <div class="post-card-meta">${w.date||''}</div>
           <div class="post-card-desc">${preview}${(w.body||'').length>80?'…':''}</div>
