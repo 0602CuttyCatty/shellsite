@@ -427,7 +427,7 @@ function renderWritingsPanel(c, container){
       <span class="photo-count">${writings.length}편의 글</span>
     </div>
     <button class="add-post-btn" onclick="requirePassword('openAddWriting','${c.id}')">＋ 글 작성</button>
-    <div class="writing-grid" id="writingGrid"></div>`;
+    <div class="post-grid" id="writingGrid"></div>`;
 
   container.appendChild(wrap);
 
@@ -437,16 +437,17 @@ function renderWritingsPanel(c, container){
   } else {
     writings.forEach((w,i)=>{
       const card=document.createElement('div');
-      card.className='writing-card';
+      card.className='post-card';
       card.style.animationDelay=i*0.055+'s';
-      const preview=(w.body||'').slice(0,100).replace(/\n/g,' ');
+      const preview=(w.body||'').slice(0,80).replace(/\n/g,' ');
       card.innerHTML=`
-        <div class="writing-card-inner">
-          <div class="writing-card-title">${w.title||'(제목 없음)'}</div>
-          <div class="writing-card-date">${w.date||''}</div>
-          <div class="writing-card-preview">${preview}${(w.body||'').length>100?'…':''}</div>
+        <div class="post-thumb-placeholder" style="aspect-ratio:4/3;font-size:2.5rem">✍️</div>
+        <div class="post-card-body">
+          <div class="post-card-title">${w.title||'(제목 없음)'}</div>
+          <div class="post-card-meta">${w.date||''}</div>
+          <div class="post-card-desc">${preview}${(w.body||'').length>80?'…':''}</div>
         </div>`;
-      card.onclick=e=>{ if(!e.target.closest('.writing-card-actions')) openWritingDetail(c.id,w.id); };
+      card.onclick=()=>openWritingDetail(c.id,w.id);
       grid.appendChild(card);
     });
   }
