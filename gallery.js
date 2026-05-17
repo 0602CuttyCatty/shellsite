@@ -427,31 +427,31 @@ function renderWritingsPanel(c, container){
       <span class="photo-count">${writings.length}편의 글</span>
     </div>
     <button class="add-post-btn" onclick="requirePassword('openAddWriting','${c.id}')">＋ 글 작성</button>
-    <div class="writing-list" id="writingList"></div>`;
+    <div class="writing-grid" id="writingGrid"></div>`;
 
   container.appendChild(wrap);
 
-  const list=wrap.querySelector('#writingList');
+  const grid=wrap.querySelector('#writingGrid');
   if (writings.length===0){
-    list.innerHTML=`<div class="empty-state"><div class="empty-icon">✍️</div><p class="empty-text">아직 글이 없어요</p></div>`;
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">✍️</div><p class="empty-text">아직 글이 없어요</p></div>`;
   } else {
     writings.forEach((w,i)=>{
-      const item=document.createElement('div');
-      item.className='writing-item';
-      item.style.animationDelay=i*0.055+'s';
-      const preview=(w.body||'').slice(0,120).replace(/\n/g,' ');
-      item.innerHTML=`
-        <div class="writing-item-header">
-          <div class="writing-item-title">${w.title||'(제목 없음)'}</div>
-          <div class="writing-item-date">${w.date||''}</div>
+      const card=document.createElement('div');
+      card.className='writing-card';
+      card.style.animationDelay=i*0.055+'s';
+      const preview=(w.body||'').slice(0,100).replace(/\n/g,' ');
+      card.innerHTML=`
+        <div class="writing-card-inner">
+          <div class="writing-card-title">${w.title||'(제목 없음)'}</div>
+          <div class="writing-card-date">${w.date||''}</div>
+          <div class="writing-card-preview">${preview}${(w.body||'').length>100?'…':''}</div>
         </div>
-        <div class="writing-item-preview">${preview}${(w.body||'').length>120?'…':''}</div>
-        <div class="writing-item-actions">
+        <div class="writing-card-actions">
           <div class="icon-btn" onclick="event.stopPropagation();requirePassword('openEditWriting','${c.id}','${w.id}')">✏️</div>
           <div class="icon-btn danger" onclick="event.stopPropagation();requirePassword('confirmDeleteWriting','${c.id}','${w.id}')">🗑️</div>
         </div>`;
-      item.onclick=e=>{ if(!e.target.closest('.writing-item-actions')) openWritingDetail(c.id, w.id); };
-      list.appendChild(item);
+      card.onclick=e=>{ if(!e.target.closest('.writing-card-actions')) openWritingDetail(c.id,w.id); };
+      grid.appendChild(card);
     });
   }
 }
@@ -815,18 +815,57 @@ function submitConfirm(){ const cb=confirmCallback; closeConfirm(); if(cb) cb();
    EMOJI PICKER
 ══════════════════════════════ */
 
-function buildEmojiPicker(containerId,onChange,initial){
-  const container=document.getElementById(containerId);
-  container.innerHTML='';
-  const selected=initial||state.selectedEmoji;
-  EMOJIS.forEach(em=>{
-    const opt=document.createElement('div');
-    opt.className='emoji-opt'+(em===selected?' selected':'');
-    opt.textContent=em;
-    opt.onclick=()=>{ state.selectedEmoji=em; container.querySelectorAll('.emoji-opt').forEach(o=>o.classList.remove('selected')); opt.classList.add('selected'); onChange(em); };
-    container.appendChild(opt);
+function buildEmojiPicker(containerId, onChange, initial){
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  const selected = initial || state.selectedEmoji;
+
+  // 직접 입력 칸
+  const inputWrap = document.createElement('div');
+  inputWrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:10px;width:100%';
+  inputWrap.innerHTML = `
+    <input id="${containerId}_custom" type="text" placeholder="이모지 직접 입력 (예: 🐱)"
+      style="flex:1;padding:8px 12px;background:rgba(8,4,24,0.75);border:1px solid rgba(180,150,255,0.28);
+             border-radius:10px;color:#e8eeff;font-size:1.1rem;outline:none;font-family:inherit"
+      maxlength="4" />
+    <button onclick="applyCustomEmoji('${containerId}')"
+      style="padding:8px 14px;border-radius:10px;background:linear-gradient(135deg,#7030d8,#2e5ec8);
+             border:none;color:white;cursor:pointer;font-size:0.82rem;font-family:inherit;flex-shrink:0">
+      적용
+    </button>`;
+  container.appendChild(inputWrap);
+
+  // 기본 이모지 목록
+  const grid = document.createElement('div');
+  grid.className = 'emoji-picker';
+  EMOJIS.forEach(em => {
+    const opt = document.createElement('div');
+    opt.className = 'emoji-opt' + (em === selected ? ' selected' : '');
+    opt.textContent = em;
+    opt.onclick = () => {
+      state.selectedEmoji = em;
+      grid.querySelectorAll('.emoji-opt').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      document.getElementById(containerId + '_custom').value = '';
+      onChange(em);
+    };
+    grid.appendChild(opt);
   });
-  state.selectedEmoji=selected;
+  container.appendChild(grid);
+  state.selectedEmoji = selected;
+}
+
+function applyCustomEmoji(containerId) {
+  const input = document.getElementById(containerId + '_custom');
+  const val   = input.value.trim();
+  if (!val) return;
+  // 이모지만 허용 (문자가 있으면 첫 글자만)
+  const em = [...val][0];
+  if (!em) return;
+  state.selectedEmoji = em;
+  // 기존 선택 해제
+  document.querySelectorAll(`#${containerId} .emoji-opt`).forEach(o => o.classList.remove('selected'));
+  showToast(`${em} 선택됨`, 'success');
 }
 
 function togglePw(inputId,btnId){
@@ -857,6 +896,7 @@ Object.assign(window,{
   removeExistingImg, removeNewImg,
   closeWritingModal, submitWriting,
   closeConfirm, submitConfirm,
+  applyCustomEmoji,
 });
 
 /* ══════════════════════════════
