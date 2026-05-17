@@ -189,7 +189,7 @@ function fbDeleteWriting(charId, writingId) {
 ══════════════════════════════ */
 
 async function uploadToCloudinary(file) {
-  const sigRes = await fetch('/.netlify/functions/verify', {
+  const sigRes = await fetch('/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'sign', folder: 'gallery' }),
@@ -578,7 +578,7 @@ async function submitPassword(){
   const pwError=document.getElementById('pwError');
   pwError.textContent='';
   try {
-    const res=await fetch('/.netlify/functions/verify',{
+    const res=await fetch('/verify',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({password:val}),
     });
